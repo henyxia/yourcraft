@@ -19,6 +19,8 @@
 #define MAX_CLIENTS 	500
 #define BUF_SIZE		1024
 
+static pthread_mutex_t sock_mutex = PTHREAD_MUTEX_INITIALIZER;
+
 typedef int SOCKET;
 typedef struct sockaddr_in SOCKADDR_IN;
 typedef struct sockaddr SOCKADDR;
@@ -68,6 +70,7 @@ void * processClient(void* arg)
 	size_t sinsize = sizeof csin;
 	client* mClient = arg;
 	int csock = accept(mClient->sock, (SOCKADDR *)&csin, &sinsize);
+	pthread_mutex_unlock(&sock_mutex);
 	if(csock == SOCKET_ERROR)
 	{
 		printf("accept failed");
@@ -107,6 +110,11 @@ void startBind(void)
 	{
 		FD_ZERO(&rdfs);
 		FD_SET(sock, &rdfs);
+
+		// Dirty way
+		while(pthread_mutex_lock(&sock_mutex) == EDEADLK)
+		{
+		}
 
 		if(select(max + 1, &rdfs, NULL, NULL, NULL) == -1)
 		{
